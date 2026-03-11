@@ -9,7 +9,8 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.unahormiga2.sistemaalertas"
     },
     "android": {
       "adaptiveIcon": {
@@ -19,14 +20,20 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.unahormiga2.sistemaalertas"
     },
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.965961286862-9p3r2okqi2su4814q2tdoa2ki3dphgon"
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -40,9 +47,12 @@
         }
       ]
     ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+    "extra": {
+      "eas": {
+        "projectId": "f928695f-91fd-4356-8ca5-412e75014883"
+      }
     }
   }
 }
+
+
