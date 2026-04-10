@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const EXTENDED_FIELDS = ["estado", "municipio", "edad", "genero"];
+const EXTENDED_FIELDS = ["estado", "municipio", "edad", "edad_texto", "genero"];
 
 function buildProfileKey(user = {}) {
   const identity = user?.id || user?.email || user?.google_id;
@@ -15,9 +15,10 @@ export function hasExtendedProfile(user = {}) {
   const estado = normalizeValue(user?.estado);
   const municipio = normalizeValue(user?.municipio);
   const genero = normalizeValue(user?.genero);
-  const edad = Number(user?.edad);
+  const edad = normalizeValue(user?.edad);
+  const edadTexto = normalizeValue(user?.edad_texto);
 
-  return Boolean(estado && municipio && genero && Number.isFinite(edad) && edad > 0);
+  return Boolean(estado && municipio && genero && (edadTexto || edad));
 }
 
 export async function loadLocalExtendedProfile(user = {}) {

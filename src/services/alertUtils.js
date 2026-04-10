@@ -1,4 +1,5 @@
 import { getAlertCreatedAt } from "./alertState";
+import { getAgeRangeLabel } from "./profileCatalogs";
 
 const REPORT_TYPE_PATTERN = /^\[Tipo atendido:\s*(.+?)\]\s*(?:\r?\n\r?\n)?([\s\S]*)$/i;
 
@@ -52,6 +53,33 @@ function findReportDescriptionValue(alert) {
   return "";
 }
 
+function findReportCandidates(alert) {
+  const reportCandidates = [];
+
+  if (Array.isArray(alert?.Reportes)) reportCandidates.push(...alert.Reportes);
+  if (Array.isArray(alert?.reportes)) reportCandidates.push(...alert.reportes);
+  if (alert?.Reporte) reportCandidates.push(alert.Reporte);
+  if (alert?.reporte) reportCandidates.push(alert.reporte);
+
+  return reportCandidates.filter(Boolean);
+}
+
+function findCitizenCandidate(alert) {
+  const candidates = [
+    alert?.ciudadano,
+    alert?.ciudadano_data,
+    alert?.usuario,
+    alert?.user,
+    alert?.solicitante,
+    alert?.data?.ciudadano,
+    alert?.data?.usuario,
+    alert?.payload?.ciudadano,
+    alert?.payload?.usuario,
+  ];
+
+  return candidates.find((item) => item && typeof item === "object") || null;
+}
+
 export function toArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -98,20 +126,50 @@ export function alertLocationText(alert) {
 }
 
 export function citizenName(alert) {
-  return (typeof alert?.ciudadano === "string" ? alert?.ciudadano : alert?.ciudadano?.nombre) || "Sin nombre";
+  const citizen = findCitizenCandidate(alert);
+  return (typeof alert?.ciudadano === "string" ? alert?.ciudadano : citizen?.nombre) || "Sin nombre";
 }
 
 export function citizenPhone(alert) {
-  return alert?.ciudadano?.telefono || alert?.telefono_ciudadano || alert?.telefono || "Sin telefono";
+  const citizen = findCitizenCandidate(alert);
+  return citizen?.telefono || alert?.telefono_ciudadano || alert?.telefono || "Sin telefono";
 }
 
 export function citizenAgeText(alert) {
-  const directAge = alert?.ciudadano?.edad ?? alert?.edad;
-  if (directAge !== undefined && directAge !== null && String(directAge).trim()) {
-    return `${directAge} anios`;
+  const citizen = findCitizenCandidate(alert);
+  const directAgeValue =
+    citizen?.edad ??
+    alert?.edad ??
+    alert?.edad_ciudadano ??
+    alert?.ciudadano_edad ??
+    alert?.citizen_age;
+  const directAgeText =
+    citizen?.edad_texto ||
+    alert?.edad_texto ||
+    alert?.edad_rango ||
+    alert?.rango_edad ||
+    alert?.ciudadano_edad_texto;
+  const ageText = getAgeRangeLabel(directAgeValue, directAgeText);
+  if (ageText) {
+    return ageText;
   }
 
-  const birthDate = parseDateValue(alert?.ciudadano?.fecha_nacimiento || alert?.fecha_nacimiento);
+  const directAge = directAgeValue;
+  if (directAge !== undefined && directAge !== null && String(directAge).trim()) {
+    const numericAge = Number(directAge);
+    if (Number.isFinite(numericAge) && numericAge > 0) {
+      return getAgeRangeLabel(numericAge) || `${numericAge} anios`;
+    }
+
+    return String(directAge).trim();
+  }
+
+  const birthDate = parseDateValue(
+    citizen?.fecha_nacimiento ||
+      alert?.fecha_nacimiento ||
+      alert?.birth_date ||
+      alert?.ciudadano_fecha_nacimiento,
+  );
   if (!birthDate) {
     return "No disponible";
   }
@@ -129,6 +187,17 @@ export function citizenAgeText(alert) {
 }
 
 export function getAlertReportType(alert) {
+  const typedReport = findReportCandidates(alert).find(
+    (item) => typeof item?.tipo_incidente === "string" && item.tipo_incidente.trim(),
+  );
+  if (typedReport?.tipo_incidente) {
+    return typedReport.tipo_incidente.trim();
+  }
+
+  if (typeof alert?.tipo_incidente === "string" && alert.tipo_incidente.trim()) {
+    return alert.tipo_incidente.trim();
+  }
+
   return parseReportValue(findReportDescriptionValue(alert)).reportType;
 }
 

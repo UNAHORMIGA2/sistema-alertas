@@ -3,6 +3,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { jwtDecode } from "jwt-decode";
 import api from "../services/api";
 import { getGoogleSignin } from "../config/google";
+import { normalizeRole } from "../services/roles";
+import { syncTenantSelectionFromUser } from "../services/tenantAccess";
 
 const ACCESS_TOKEN_KEY = "@auth:token";
 const REFRESH_TOKEN_KEY = "@auth:refresh_token";
@@ -22,19 +24,25 @@ const AuthContext = createContext({
 function buildUserFromToken(accessToken, fallbackUser = {}) {
   try {
     const decoded = jwtDecode(accessToken);
+    const resolvedRole = normalizeRole(decoded.rol || decoded.role || fallbackUser.rol || fallbackUser.role || "ciudadano");
     return {
       id: decoded.id || decoded.sub || fallbackUser.id || null,
       nombre: fallbackUser.nombre || fallbackUser.name || decoded.nombre || decoded.name || "",
       email: fallbackUser.email || decoded.email || "",
-      rol: decoded.rol || decoded.role || fallbackUser.rol || fallbackUser.role || "ciudadano",
       plataforma: "mobile",
+      tenant_id: decoded.tenant_id || fallbackUser.tenant_id || fallbackUser.tenantId || "",
       ...fallbackUser,
+      rol: resolvedRole,
+      role: resolvedRole,
     };
   } catch {
+    const resolvedRole = normalizeRole(fallbackUser.rol || fallbackUser.role || "ciudadano");
     return {
       plataforma: "mobile",
-      rol: fallbackUser.rol || fallbackUser.role || "ciudadano",
+      tenant_id: fallbackUser.tenant_id || fallbackUser.tenantId || "",
       ...fallbackUser,
+      rol: resolvedRole,
+      role: resolvedRole,
     };
   }
 }
@@ -60,6 +68,7 @@ export function AuthProvider({ children }) {
 
         if (access) {
           const normalizedUser = buildUserFromToken(access, parsedStoredUser || {});
+          await syncTenantSelectionFromUser(normalizedUser);
           setToken(access);
           setRefreshToken(refresh);
           setUser(normalizedUser);
@@ -76,6 +85,7 @@ export function AuthProvider({ children }) {
 
   const login = async ({ accessToken, refreshToken: newRefreshToken, user: incomingUser = {} }) => {
     const normalizedUser = buildUserFromToken(accessToken, incomingUser);
+    await syncTenantSelectionFromUser(normalizedUser);
     setToken(accessToken);
     setRefreshToken(newRefreshToken || null);
     setUser(normalizedUser);

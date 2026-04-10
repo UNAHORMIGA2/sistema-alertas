@@ -2,7 +2,6 @@ import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,7 +11,23 @@ import {
 } from "react-native";
 import api from "../../services/api";
 import { saveLocalExtendedProfile } from "../../services/localExtendedProfile";
-import { AGE_OPTIONS, GENDER_OPTIONS, getMunicipalityOptions, STATE_OPTIONS } from "../../services/profileCatalogs";
+import {
+  AGE_OPTIONS,
+  GENDER_OPTIONS,
+  getAgeNumber,
+  getAgeRangeLabel,
+  getAgeSelectionValue,
+  getMunicipalityOptions,
+  resolveStateOption,
+  STATE_OPTIONS,
+} from "../../services/profileCatalogs";
+import SearchableSelectModal from "../../components/SearchableSelectModal";
+import { isAccessCodeCompatible, saveTenantSelection } from "../../services/tenantAccess";
+
+
+function sanitizePhone(value) {
+  return String(value || "").replace(/\D/g, "").slice(0, 10);
+}
 
 function sessionHeaders(session) {
   const access = session?.accessToken;
@@ -45,13 +60,15 @@ export default function CompleteProfileScreen({ navigation, route }) {
   const role = baseUser?.rol || baseUser?.role || "ciudadano";
 
   const [nombre, setNombre] = useState(baseUser?.nombre || "");
-  const [telefono, setTelefono] = useState(baseUser?.telefono || "");
-  const [estado, setEstado] = useState(baseUser?.estado || "");
+  const [telefono, setTelefono] = useState(sanitizePhone(baseUser?.telefono || ""));
+  const [estado, setEstado] = useState(resolveStateOption(baseUser?.estado || ""));
   const [municipio, setMunicipio] = useState(baseUser?.municipio || "");
-  const [edad, setEdad] = useState(baseUser?.edad ? String(baseUser.edad) : "");
+  const [accessCode, setAccessCode] = useState("");
+  const [edad, setEdad] = useState(getAgeSelectionValue(baseUser?.edad, baseUser?.edad_texto));
   const [genero, setGenero] = useState(baseUser?.genero || "");
   const [loading, setLoading] = useState(false);
   const [activeSelector, setActiveSelector] = useState("");
+
 
   const municipalityOptions = useMemo(() => {
     const baseOptions = getMunicipalityOptions(estado);
@@ -67,8 +84,9 @@ export default function CompleteProfileScreen({ navigation, route }) {
         title: "Selecciona tu estado",
         options: STATE_OPTIONS,
         onSelect: (option) => {
-          setEstado(option);
-          if (!getMunicipalityOptions(option).includes(municipio)) {
+          const resolvedState = resolveStateOption(option);
+          setEstado(resolvedState);
+          if (!getMunicipalityOptions(resolvedState).includes(municipio)) {
             setMunicipio("");
           }
         },
@@ -93,44 +111,75 @@ export default function CompleteProfileScreen({ navigation, route }) {
   );
 
   const currentSelector = selectorConfig[activeSelector];
-  const canContinue = useMemo(
-    () =>
+  const requiresAccessCode = role === "ciudadano";
+
+  const canContinue = useMemo(() => {
+    const baseValid =
       nombre.trim().length > 1 &&
-      telefono.trim().length >= 8 &&
+      telefono.trim().length === 10 &&
       estado.trim().length > 0 &&
       municipio.trim().length > 0 &&
       edad.trim().length > 0 &&
-      genero.trim().length > 0,
-    [edad, estado, genero, municipio, nombre, telefono],
-  );
+      genero.trim().length > 0;
+
+    if (requiresAccessCode) {
+      return baseValid && accessCode.trim().length >= 3;
+    }
+    return baseValid;
+  }, [edad, estado, genero, municipio, nombre, telefono, accessCode, requiresAccessCode]);
 
   const handleContinue = async () => {
     if (!canContinue) {
-      Alert.alert("Faltan datos", "Completa nombre, telefono, estado, municipio, edad y genero.");
+      Alert.alert("Faltan datos", "Verifica que todos los campos obligatorios esten completos y que el telefono tenga exactamente 10 digitos.");
+      return;
+    }
+
+    if (requiresAccessCode && !isAccessCodeCompatible(municipio, accessCode)) {
+      Alert.alert("Codigo invalido", "El codigo municipal no coincide con el municipio seleccionado. Por favor verifica.");
       return;
     }
 
     try {
       setLoading(true);
 
+      if (requiresAccessCode) {
+        await saveTenantSelection({
+          state: estado.trim(),
+          municipality: municipio.trim(),
+          accessCode: accessCode.trim(),
+        });
+      }
+
+
       const profilePayload = {
         nombre: nombre.trim(),
-        telefono: telefono.trim(),
+        telefono: sanitizePhone(telefono),
         estado: estado.trim(),
         municipio: municipio.trim(),
-        edad: Number(edad),
+        edad: getAgeNumber(edad),
+        edad_texto: getAgeRangeLabel(edad),
         genero: genero.trim(),
       };
 
       let updatedUser = { ...baseUser, ...profilePayload };
 
       if (role === "ciudadano") {
+        if (profilePayload.telefono.length !== 10) {
+          throw new Error("El telefono debe tener exactamente 10 digitos.");
+        }
+
+        const backendProfilePayload = {
+          nombre: profilePayload.nombre,
+          telefono: profilePayload.telefono,
+          estado: profilePayload.estado,
+          municipio: profilePayload.municipio,
+          edad: profilePayload.edad,
+          genero: profilePayload.genero,
+        };
+
         const response = await api.patch(
           "/mobile/ciudadano/perfil",
-          {
-            nombre: profilePayload.nombre,
-            telefono: profilePayload.telefono,
-          },
+          backendProfilePayload,
           {
             headers: sessionHeaders(session),
           },
@@ -155,9 +204,14 @@ export default function CompleteProfileScreen({ navigation, route }) {
         },
       });
     } catch (error) {
+      const rawMessage = error?.response?.data?.error || error?.response?.data?.message || error?.message || "";
+      const normalizedMessage = String(rawMessage).toLowerCase();
+
       Alert.alert(
         "Error",
-        error?.response?.data?.error || error?.response?.data?.message || "No fue posible completar tu perfil.",
+        normalizedMessage.includes("telefono") && normalizedMessage.includes("exist")
+          ? "Ese telefono ya esta registrado. Usa otro numero."
+          : rawMessage || "No fue posible completar tu perfil.",
       );
     } finally {
       setLoading(false);
@@ -189,8 +243,9 @@ export default function CompleteProfileScreen({ navigation, route }) {
           style={styles.input}
           placeholder="Ej. 2381234567"
           value={telefono}
-          onChangeText={setTelefono}
-          keyboardType="phone-pad"
+          onChangeText={(value) => setTelefono(sanitizePhone(value))}
+          keyboardType="number-pad"
+          maxLength={10}
         />
 
         <SelectField
@@ -207,6 +262,19 @@ export default function CompleteProfileScreen({ navigation, route }) {
           onPress={() => setActiveSelector("municipio")}
           disabled={!estado}
         />
+
+        {requiresAccessCode && (
+          <>
+            <Text style={styles.label}>Codigo Municipal (obligatorio)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ej. TEP12345"
+              value={accessCode}
+              onChangeText={setAccessCode}
+              autoCapitalize="characters"
+            />
+          </>
+        )}
 
         <View style={styles.row}>
           <View style={styles.col}>
@@ -236,20 +304,15 @@ export default function CompleteProfileScreen({ navigation, route }) {
         </Pressable>
       </ScrollView>
 
-      <Modal transparent visible={Boolean(activeSelector)} animationType="fade" onRequestClose={() => setActiveSelector("") }>
-        <Pressable style={styles.modalOverlay} onPress={() => setActiveSelector("") }>
-          <Pressable style={styles.modalCard} onPress={() => {}}>
-            <Text style={styles.modalTitle}>{currentSelector?.title || "Selecciona una opcion"}</Text>
-            <ScrollView style={styles.optionsList} contentContainerStyle={styles.optionsContent}>
-              {(currentSelector?.options || []).map((option) => (
-                <Pressable key={option} style={styles.optionItem} onPress={() => handleSelectOption(option)}>
-                  <Text style={styles.optionText}>{option}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <SearchableSelectModal
+        visible={Boolean(activeSelector)}
+        title={currentSelector?.title || "Selecciona una opcion"}
+        options={currentSelector?.options || []}
+        onClose={() => setActiveSelector("")}
+        onSelect={handleSelectOption}
+        searchPlaceholder={activeSelector === "municipio" ? "Buscar municipio" : "Buscar opcion"}
+        emptyText="No hay resultados con ese criterio."
+      />
     </View>
   );
 }
@@ -310,43 +373,4 @@ const styles = StyleSheet.create({
   },
   primaryText: { color: "#E0F2FE", fontWeight: "800", fontSize: 20 },
   disabled: { opacity: 0.6 },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.45)",
-    justifyContent: "center",
-    paddingHorizontal: 18,
-  },
-  modalCard: {
-    maxHeight: "70%",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#0F172A",
-    textAlign: "center",
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-  optionsList: {
-    width: "100%",
-  },
-  optionsContent: {
-    paddingHorizontal: 10,
-    paddingBottom: 10,
-  },
-  optionItem: {
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 13,
-  },
-  optionText: {
-    color: "#111827",
-    fontSize: 15,
-    fontWeight: "600",
-  },
 });

@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" mc:Ignorable="w14 wp14">
+  <w:body>
+    <w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">Tecnologias Utilizadas en la Aplicacion Movil del Sistema de Alertas</w:t></w:r></w:p>
+    <w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">1. Introduccion</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">La aplicacion movil fue desarrollada como una solucion multiplataforma orientada a ciudadanos, policias y ambulancias. Para su construccion se seleccionaron tecnologias que permitieran rapidez de desarrollo, integracion con funciones nativas del dispositivo, escalabilidad y facilidad de mantenimiento.</w:t></w:r></w:p>
+    <w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">2. Tecnologias principales utilizadas</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">2.1 React Native</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: framework principal para construir la aplicacion movil.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: React Native fue seleccionado porque permite desarrollar una sola base de codigo para Android e iOS, reduciendo tiempo, costos y duplicacion de esfuerzo. Ademas, ofrece acceso a componentes nativos, buen rendimiento para aplicaciones empresariales y una gran comunidad.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">2.2 Expo</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: plataforma y conjunto de herramientas para facilitar el desarrollo, configuracion y compilacion de la app.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: Expo simplifica tareas complejas como notificaciones, permisos, ubicacion, assets y compilacion. Fue importante para acelerar el desarrollo y reducir la complejidad de configuraciones nativas manuales.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">2.3 JavaScript</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: lenguaje principal del frontend movil.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: JavaScript permite una integracion natural con React Native, es ampliamente utilizado y facilita el desarrollo rapido de interfaces, logica de negocio y consumo de APIs.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">2.4 React</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: biblioteca base para la construccion de interfaces mediante componentes.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: React aporta un modelo basado en componentes reutilizables, lo cual facilita la organizacion del proyecto, el mantenimiento y la escalabilidad del sistema.</w:t></w:r></w:p>
+    <w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">3. Navegacion y estructura de pantallas</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">3.1 React Navigation</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: administracion de navegacion entre pantallas y flujos segun el rol del usuario.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: fue elegida porque permite organizar la app en stacks independientes para ciudadano, policia y ambulancia, manteniendo un flujo claro y controlado.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">3.2 Native Stack Navigator</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: implementacion de navegacion tipo stack con comportamiento nativo.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: mejora la experiencia del usuario al ofrecer transiciones mas cercanas a una app nativa y mejor rendimiento.</w:t></w:r></w:p>
+    <w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">4. Manejo de estado y persistencia</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">4.1 React Context API</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: gestion global del estado de autenticacion y notificaciones.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: se eligio porque el proyecto necesita estado global pero no requiere aun una solucion mas pesada como Redux. Context API permite simplicidad, claridad y bajo acoplamiento.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">4.2 AsyncStorage</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: almacenamiento local de sesion, usuario, tokens y datos auxiliares.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: es una solucion ligera y adecuada para persistir informacion pequena y mediana en el dispositivo, como credenciales y configuraciones del usuario.</w:t></w:r></w:p>
+    <w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">5. Comunicacion con backend</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">5.1 Axios</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: cliente HTTP para consumir la API REST del backend.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: Axios facilita el manejo de interceptores, autenticacion, headers personalizados, tiempo de espera y renovacion automatica de sesion.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">5.2 Socket.IO Client</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: recepcion de eventos en tiempo real.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: fue importante para actualizar alertas sin necesidad de recargar continuamente la aplicacion, especialmente en escenarios donde una unidad acepta o actualiza una alerta.</w:t></w:r></w:p>
+    <w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">6. Autenticacion y seguridad</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">6.1 Google Sign-In</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: inicio de sesion mediante cuenta de Google.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: mejora la experiencia del usuario al evitar registros tradicionales largos y aprovecha un mecanismo ampliamente conocido y confiable.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">6.2 JWT Decode</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: lectura de informacion del token para normalizar el perfil del usuario.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: permite interpretar el token de acceso y extraer datos necesarios para la sesion de manera rapida.</w:t></w:r></w:p>
+    <w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">7. Funciones nativas del dispositivo</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">7.1 Expo Notifications</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: gestion de notificaciones push y locales.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: es una tecnologia critica porque el sistema depende de alertas inmediatas. Permite notificaciones en primer plano, segundo plano y reacciones al tocar la notificacion.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">7.2 Expo Device</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: obtener informacion del dispositivo para registro y compatibilidad de push notifications.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: ayuda a diferenciar plataforma y asegurar el registro correcto del token de notificaciones.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">7.3 Expo Constants</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: acceso a configuraciones del proyecto y datos del entorno de Expo.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: facilita obtener identificadores como el projectId requerido para Expo Push Notifications.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">7.4 Expo Location</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: obtener y monitorear la ubicacion del usuario o unidad.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: es una de las tecnologias mas importantes del sistema, porque la logica principal depende de conocer la ubicacion para crear alertas, asignar unidades y aplicar filtros por municipio o cercania.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">7.5 React Native Android Widget</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: integracion de un widget de boton de panico en Android.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: mejora la accesibilidad del sistema al permitir enviar una alerta desde la pantalla principal del telefono sin abrir completamente la aplicacion.</w:t></w:r></w:p>
+    <w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">8. Interfaz y experiencia de usuario</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">8.1 Expo Vector Icons</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: iconografia en menus, estados, acciones y paneles.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: permite mantener una interfaz clara, moderna y coherente con poco esfuerzo.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">8.2 React Native Gesture Handler</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: soporte para interacciones tactiles y gestos.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: mejora la experiencia de navegacion y compatibilidad con componentes avanzados.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">8.3 React Native Safe Area Context</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: adaptacion de la interfaz a diferentes pantallas y zonas seguras.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: importante para evitar que elementos queden ocultos en dispositivos con notch o areas especiales.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">8.4 React Native Screens</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: optimizacion de la gestion de pantallas.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: ayuda a mejorar el rendimiento de la navegacion al usar primitivas mas cercanas al comportamiento nativo.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">8.5 React Native Reanimated</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: soporte para animaciones y transiciones mas fluidas.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: aporta mejor rendimiento y una experiencia visual mas profesional cuando se requieren interacciones dinamicas.</w:t></w:r></w:p>
+    <w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">9. Multimedia y archivos</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">9.1 Expo Image Picker</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: seleccion o captura de imagenes para reportes.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: permite adjuntar evidencia visual de la atencion de una alerta, lo cual fortalece el registro del servicio prestado.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">9.2 Expo Image</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: renderizado optimizado de imagenes.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: mejora el manejo de imagenes en comparacion con implementaciones mas basicas y contribuye a una visualizacion mas eficiente.</w:t></w:r></w:p>
+    <w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">10. Mapas y georreferenciacion</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">10.1 React Native Maps</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: soporte para visualizacion de mapas embebidos.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: aunque actualmente se priorizo la apertura de Google Maps externo por estabilidad, esta tecnologia fue integrada para habilitar una evolucion futura hacia mapas nativos dentro de la app.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">10.2 Expo Linking</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: apertura de aplicaciones externas como Google Maps.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: permite enviar al usuario directamente a rutas o coordenadas en una aplicacion externa ya instalada.</w:t></w:r></w:p>
+    <w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">11. Construccion y despliegue</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">11.1 EAS Build</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: compilacion remota de APK, AAB y builds internos.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: fue elegida porque permite generar builds sin depender por completo del entorno local, simplificando la distribucion de versiones de prueba y produccion.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">11.2 Expo CLI</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Uso: ejecucion del proyecto en desarrollo, pruebas y comandos de compilacion.</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Justificacion: facilita la administracion del ciclo de desarrollo diario y la integracion con el ecosistema Expo.</w:t></w:r></w:p>
+    <w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">12. Tecnologias complementarias instaladas en el proyecto</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Tambien se encuentran integradas o preparadas dependencias como expo-font, expo-haptics, expo-splash-screen, expo-status-bar, expo-system-ui, react-native-web, react-dom y expo-router. Algunas se usan de forma directa y otras quedan listas para futuras ampliaciones del sistema.</w:t></w:r></w:p>
+    <w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">13. Conclusiones</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Las tecnologias seleccionadas responden a necesidades concretas del proyecto: desarrollo multiplataforma, rapidez de implementacion, acceso a funciones nativas, soporte para notificaciones, geolocalizacion y escalabilidad. React Native y Expo constituyen el nucleo del sistema, mientras que Axios, Socket.IO, AsyncStorage, Expo Notifications y Expo Location complementan la logica operativa necesaria para un sistema de alertas de emergencia movil.</w:t></w:r></w:p>
+    <w:sectPr>
+      <w:pgSz w:w="12240" w:h="15840"/>
+      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="708" w:footer="708" w:gutter="0"/>
+    </w:sectPr>
+  </w:body>
+</w:document>

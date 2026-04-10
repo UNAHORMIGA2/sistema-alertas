@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import api from "../../services/api";
+import { TERMS_FULL, TERMS_PREVIEW } from "../../constants/termsContent";
 
 function sessionHeaders(session) {
   const access = session?.accessToken;
@@ -20,6 +21,7 @@ function sessionHeaders(session) {
 export default function TermsScreen({ navigation, route }) {
   const session = route?.params?.session;
   const [loading, setLoading] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   const handleAccept = async () => {
     try {
@@ -56,19 +58,21 @@ export default function TermsScreen({ navigation, route }) {
         <Text style={styles.subtitle}>Acepta los terminos para poder seguir con el proceso de registro</Text>
 
         <ScrollView style={styles.termsBox} contentContainerStyle={styles.termsContent}>
-          <Text style={styles.text}>
-            Al utilizar esta aplicacion, el usuario acepta cumplir con los presentes Terminos y Condiciones. Si no
-            esta de acuerdo con alguno de ellos, debera abstenerse de utilizar la aplicacion.
-          </Text>
-          <Text style={styles.text}>
-            1. Uso de la aplicacion. Esta aplicacion facilita el envio de alertas de emergencia y la comunicacion con
-            servicios de apoyo como policia y ambulancia. El usuario se compromete a utilizarla de forma responsable.
-          </Text>
-          <Text style={styles.text}>
-            2. Registro de usuario. Para acceder a ciertas funciones, es necesario crear una cuenta con informacion
-            verificable y actualizada.
-          </Text>
-          <Text style={styles.more}>... Ver mas</Text>
+          {TERMS_PREVIEW.map((item) => (
+            <Text key={item} style={styles.text}>
+              {item}
+            </Text>
+          ))}
+          {expanded
+            ? TERMS_FULL.map((item) => (
+                <Text key={item} style={styles.text}>
+                  {item}
+                </Text>
+              ))
+            : null}
+          <Pressable style={styles.moreButton} onPress={() => setExpanded((value) => !value)}>
+            <Text style={styles.more}>{expanded ? "Ver menos" : "Ver mas"}</Text>
+          </Pressable>
         </ScrollView>
 
         <Pressable style={styles.acceptBtn} onPress={handleAccept} disabled={loading}>
@@ -138,8 +142,12 @@ const styles = StyleSheet.create({
   more: {
     color: "#2563EB",
     fontWeight: "700",
-    marginTop: 2,
     fontSize: 13,
+  },
+  moreButton: {
+    alignSelf: "flex-start",
+    marginTop: 2,
+    paddingVertical: 4,
   },
   acceptBtn: {
     marginTop: 14,

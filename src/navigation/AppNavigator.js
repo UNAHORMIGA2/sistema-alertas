@@ -1,10 +1,12 @@
-import React from "react";
-import { NavigationContainer } from "@react-navigation/native";
+import React, { useEffect, useState } from "react";
+import { NavigationContainer, createNavigationContainerRef } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { useAuth } from "../context/AuthContext";
+import { useNotificationCenter } from "../context/NotificationCenterContext";
 
 import LoginScreen from "../screens/auth/LoginScreen";
+import CitizenAccessScreen from "../screens/auth/CitizenAccessScreen";
 import TermsScreen from "../screens/auth/TermsScreen";
 import TermsDeclinedScreen from "../screens/auth/TermsDeclinedScreen";
 import CompleteProfileScreen from "../screens/auth/CompleteProfileScreen";
@@ -13,9 +15,12 @@ import AccountCreatedScreen from "../screens/auth/AccountCreatedScreen";
 import CitizenStack from "./CitizenStack";
 import PoliceStack from "./PoliceStack";
 import AmbulanceStack from "./AmbulanceStack";
+import { buildAlertFromNotificationPayload, getNotificationTargetForRole } from "../services/notificationNavigation";
+import { isAmbulanceRole, isCitizenRole, isPoliceRole, normalizeRole } from "../services/roles";
 
 const RootStack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
+const navigationRef = createNavigationContainerRef();
 
 function LoadingScreen() {
   return (
@@ -33,7 +38,7 @@ function UnauthorizedScreen() {
     <View style={styles.centered}>
       <Text style={styles.title}>Rol no permitido en app movil</Text>
       <Text style={styles.subtitle}>
-        El rol actual es "{user?.rol || "desconocido"}". Usa el panel web para admin/superadmin.
+        El rol actual es &quot;{user?.rol || "desconocido"}&quot;. Usa el panel web para admin/superadmin.
       </Text>
       <Pressable style={styles.primaryButton} onPress={logout}>
         <Text style={styles.primaryButtonText}>Cerrar sesion</Text>
@@ -44,8 +49,9 @@ function UnauthorizedScreen() {
 
 function AuthNavigator() {
   return (
-    <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+      <AuthStack.Navigator screenOptions={{ headerShown: false }}>
       <AuthStack.Screen name="Login" component={LoginScreen} />
+      <AuthStack.Screen name="CitizenAccess" component={CitizenAccessScreen} />
       <AuthStack.Screen name="Terms" component={TermsScreen} />
       <AuthStack.Screen name="TermsDeclined" component={TermsDeclinedScreen} />
       <AuthStack.Screen name="CompleteProfile" component={CompleteProfileScreen} />
@@ -56,17 +62,44 @@ function AuthNavigator() {
 
 export default function AppNavigator() {
   const { user, loading } = useAuth();
+  const { pendingNotification, clearPendingNotification } = useNotificationCenter();
+  const [navigationReady, setNavigationReady] = useState(false);
+  const role = normalizeRole(user?.rol);
+
+  useEffect(() => {
+    if (!navigationReady || !pendingNotification || !role) {
+      return;
+    }
+
+    const target = getNotificationTargetForRole(role, pendingNotification.payload);
+    const alert = buildAlertFromNotificationPayload(pendingNotification.payload);
+
+    if (!target || !alert || !navigationRef.isReady()) {
+      clearPendingNotification();
+      return;
+    }
+
+    navigationRef.navigate(target.root, {
+      screen: target.screen,
+      params: {
+        alert,
+        readOnly: false,
+      },
+    });
+
+    clearPendingNotification();
+  }, [clearPendingNotification, navigationReady, pendingNotification, role]);
 
   if (loading) {
     return <LoadingScreen />;
   }
 
-  const isCitizen = user?.rol === "ciudadano";
-  const isPolice = user?.rol === "policia";
-  const isAmbulance = user?.rol === "ambulancia";
+  const isCitizen = isCitizenRole(role);
+  const isPolice = isPoliceRole(role);
+  const isAmbulance = isAmbulanceRole(role);
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef} onReady={() => setNavigationReady(true)}>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
         {!user && <RootStack.Screen name="Auth" component={AuthNavigator} />}
         {isCitizen && <RootStack.Screen name="CitizenApp" component={CitizenStack} />}

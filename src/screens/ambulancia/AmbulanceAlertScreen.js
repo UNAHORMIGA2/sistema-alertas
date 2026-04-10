@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import api from "../../services/api";
@@ -24,15 +24,51 @@ function getStatusLabel(status) {
 }
 
 export default function AmbulanceAlertScreen({ navigation, route }) {
-  const alert = route?.params?.alert || {};
+  const initialAlert = useMemo(() => route?.params?.alert || {}, [route?.params?.alert]);
   const readOnly = route?.params?.readOnly === true;
+  const [alert, setAlert] = useState(initialAlert);
   const coords = extractLatLng(alert) || { lat: 19.4326, lng: -99.1332 };
-  const alertId = alert?.id || alert?._id;
+  const alertId = alert?.id || alert?._id || initialAlert?.id || initialAlert?._id;
   const locationText = alertLocationText(alert);
   const reportDescription = getAlertReportDescription(alert);
   const reportType = getAlertReportType(alert);
   const statusLabel = useMemo(() => getStatusLabel(alert?.estado), [alert?.estado]);
   const canSendReport = !readOnly && !["cerrada", "expirada", "cancelada"].includes(String(alert?.estado || "").toLowerCase());
+  const ageText = citizenAgeText(alert);
+
+  useEffect(() => {
+    setAlert(initialAlert);
+  }, [initialAlert]);
+
+  useEffect(() => {
+    if (readOnly || !alertId) {
+      return undefined;
+    }
+
+    let active = true;
+
+    const syncAssignedAlert = async () => {
+      try {
+        const response = await api.get("/mobile/asignaciones/mias");
+        const assignedAlerts = response?.data?.data || response?.data?.alertas || response?.data || [];
+        const nextAlert = Array.isArray(assignedAlerts)
+          ? assignedAlerts.find((item) => String(item?.id || item?._id || "") === String(alertId))
+          : null;
+
+        if (active && nextAlert) {
+          setAlert((prev) => ({ ...prev, ...nextAlert }));
+        }
+      } catch {
+        // Si falla, conservamos los datos ya cargados.
+      }
+    };
+
+    syncAssignedAlert();
+
+    return () => {
+      active = false;
+    };
+  }, [alertId, readOnly]);
 
   const openMaps = () => {
     const url = `https://www.google.com/maps/search/?api=1&query=${coords.lat},${coords.lng}`;
@@ -66,7 +102,7 @@ export default function AmbulanceAlertScreen({ navigation, route }) {
         <Text style={styles.sectionLabel}>Detalles de la emergencia:</Text>
         <Text style={styles.line}>Nombre: {citizenName(alert)}</Text>
         <Text style={styles.line}>Telefono: {citizenPhone(alert)}</Text>
-        <Text style={styles.line}>Edad: {citizenAgeText(alert)}</Text>
+        {ageText && ageText !== "No disponible" ? <Text style={styles.line}>Edad: {ageText}</Text> : null}
         <Text style={styles.line}>Ubicacion: {locationText}</Text>
         <Text style={styles.line}>Creada: {formatDateTime(alert?.fecha_creacion)}</Text>
         {alert?.fecha_cierre ? <Text style={styles.line}>Cerrada: {formatDateTime(alert?.fecha_cierre)}</Text> : null}

@@ -6,6 +6,10 @@ export default function AlertClosedScreen({ navigation }) {
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState("");
 
+  const goToDashboard = () => {
+    navigation.reset({ index: 0, routes: [{ name: "Dashboard" }] });
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.card}>
@@ -33,7 +37,7 @@ export default function AlertClosedScreen({ navigation }) {
         textAlignVertical="top"
       />
 
-      <Pressable style={styles.primaryButton} onPress={() => navigation.navigate("Dashboard")}>
+      <Pressable style={styles.primaryButton} onPress={goToDashboard}>
         <Text style={styles.primaryText}>Enviar</Text>
       </Pressable>
     </View>

@@ -1,0 +1,146 @@
+{\rtf1\ansi\deff0
+{\fonttbl{\f0 Calibri;}{\f1 Arial;}}
+\fs24
+\pard\qc\b\f0\fs32 Documento Tecnico de Tecnologias Utilizadas en la Aplicacion Movil\par
+\pard\sa180\sb120\fs24\b0
+\b 1. Introduccion\b0\par
+La aplicacion movil del sistema de alertas fue desarrollada como una solucion multiplataforma orientada a ciudadanos, policias y ambulancias. Para su construccion se seleccionaron tecnologias que permitieran rapidez de desarrollo, acceso a funciones nativas del dispositivo, escalabilidad y facilidad de mantenimiento.\par
+
+\b 2. Tecnologias principales utilizadas\b0\par
+
+\b 2.1 React Native\b0\par
+Uso: framework principal para construir la aplicacion movil.\par
+Justificacion: React Native fue seleccionado porque permite desarrollar una sola base de codigo para Android e iOS, reduciendo tiempo, costos y duplicacion de esfuerzo. Ademas, ofrece acceso a componentes nativos, buen rendimiento y una comunidad amplia.\par
+
+\b 2.2 Expo\b0\par
+Uso: plataforma y conjunto de herramientas para facilitar el desarrollo, configuracion y compilacion de la aplicacion.\par
+Justificacion: Expo simplifica tareas complejas como notificaciones, permisos, ubicacion, assets y compilacion. Fue importante para acelerar el desarrollo y reducir la complejidad nativa manual.\par
+
+\b 2.3 JavaScript\b0\par
+Uso: lenguaje principal del frontend movil.\par
+Justificacion: JavaScript se integra de forma natural con React Native y permite desarrollar rapidamente la interfaz, la logica de negocio y el consumo de APIs.\par
+
+\b 2.4 React\b0\par
+Uso: biblioteca base para la construccion de interfaces mediante componentes.\par
+Justificacion: React aporta un modelo de desarrollo basado en componentes reutilizables, lo cual facilita la organizacion, el mantenimiento y la escalabilidad del sistema.\par
+
+\b 3. Navegacion y estructura de pantallas\b0\par
+
+\b 3.1 React Navigation\b0\par
+Uso: administracion de navegacion entre pantallas y flujos segun el rol del usuario.\par
+Justificacion: permite organizar la aplicacion en flujos separados para ciudadano, policia y ambulancia, manteniendo una experiencia clara y controlada.\par
+
+\b 3.2 Native Stack Navigator\b0\par
+Uso: implementacion de navegacion tipo stack con comportamiento cercano al nativo.\par
+Justificacion: mejora la experiencia del usuario al ofrecer transiciones mas fluidas y un mejor rendimiento.\par
+
+\b 4. Manejo de estado y persistencia\b0\par
+
+\b 4.1 React Context API\b0\par
+Uso: gestion global del estado de autenticacion y notificaciones.\par
+Justificacion: se eligio por ser una solucion ligera y suficiente para el tamano actual del proyecto, evitando la complejidad extra de herramientas mas pesadas.\par
+
+\b 4.2 AsyncStorage\b0\par
+Uso: almacenamiento local de sesion, usuario, tokens y datos auxiliares.\par
+Justificacion: es adecuado para persistir informacion pequena y mediana en el dispositivo, como credenciales, configuraciones y datos locales del perfil.\par
+
+\b 5. Comunicacion con backend\b0\par
+
+\b 5.1 Axios\b0\par
+Uso: cliente HTTP para consumir la API REST del backend.\par
+Justificacion: Axios facilita el manejo de interceptores, autenticacion, headers personalizados y renovacion automatica de sesion.\par
+
+\b 5.2 Socket.IO Client\b0\par
+Uso: recepcion de eventos en tiempo real.\par
+Justificacion: fue importante para actualizar alertas de manera inmediata cuando una unidad acepta, atiende o cierra una alerta, sin depender solo de recargas manuales.\par
+
+\b 6. Autenticacion y seguridad\b0\par
+
+\b 6.1 Google Sign-In\b0\par
+Uso: inicio de sesion mediante cuenta de Google.\par
+Justificacion: mejora la experiencia del usuario al evitar registros tradicionales largos y aprovecha un mecanismo ampliamente conocido y confiable.\par
+
+\b 6.2 JWT Decode\b0\par
+Uso: lectura de informacion contenida en el token de acceso.\par
+Justificacion: permite interpretar rapidamente datos del usuario para normalizar la sesion y controlar el acceso segun el rol.\par
+
+\b 7. Funciones nativas del dispositivo\b0\par
+
+\b 7.1 Expo Notifications\b0\par
+Uso: gestion de notificaciones push y locales.\par
+Justificacion: es una tecnologia critica del sistema porque la aplicacion depende de alertas inmediatas. Permite notificaciones en primer plano, segundo plano y apertura contextual al tocar la notificacion.\par
+
+\b 7.2 Expo Device\b0\par
+Uso: obtener informacion del dispositivo para compatibilidad y registro de notificaciones.\par
+Justificacion: ayuda a diferenciar plataforma y asegurar el registro correcto del token de notificaciones.\par
+
+\b 7.3 Expo Constants\b0\par
+Uso: acceso a configuraciones del proyecto y datos del entorno.\par
+Justificacion: facilita obtener identificadores de proyecto y otros valores necesarios para integraciones como Expo Push Notifications.\par
+
+\b 7.4 Expo Location\b0\par
+Uso: obtencion y monitoreo de la ubicacion del usuario o unidad.\par
+Justificacion: es una de las tecnologias mas importantes del sistema, porque la logica central depende de conocer la ubicacion para crear alertas, asignar unidades y filtrar por municipio o cercania.\par
+
+\b 7.5 React Native Android Widget\b0\par
+Uso: integracion de un widget de boton de panico en Android.\par
+Justificacion: mejora la accesibilidad del sistema al permitir el envio de una alerta desde la pantalla principal del telefono sin abrir completamente la aplicacion.\par
+
+\b 8. Interfaz y experiencia de usuario\b0\par
+
+\b 8.1 Expo Vector Icons\b0\par
+Uso: iconografia en menus, estados, acciones y paneles.\par
+Justificacion: permite mantener una interfaz clara, moderna y visualmente consistente.\par
+
+\b 8.2 React Native Gesture Handler\b0\par
+Uso: soporte para interacciones tactiles y gestos.\par
+Justificacion: mejora la experiencia de navegacion y la compatibilidad con componentes interactivos avanzados.\par
+
+\b 8.3 React Native Safe Area Context\b0\par
+Uso: adaptacion de la interfaz a diferentes pantallas y zonas seguras.\par
+Justificacion: evita que elementos de la interfaz queden ocultos en dispositivos con notch o areas especiales.\par
+
+\b 8.4 React Native Screens\b0\par
+Uso: optimizacion de la gestion de pantallas.\par
+Justificacion: contribuye al rendimiento de la navegacion al usar primitivas mas cercanas al comportamiento nativo.\par
+
+\b 8.5 React Native Reanimated\b0\par
+Uso: soporte para animaciones y transiciones fluidas.\par
+Justificacion: mejora la experiencia visual y aporta mayor rendimiento en interacciones dinamicas.\par
+
+\b 9. Multimedia y archivos\b0\par
+
+\b 9.1 Expo Image Picker\b0\par
+Uso: seleccion o captura de imagenes para reportes.\par
+Justificacion: permite adjuntar evidencia visual de la atencion brindada en una alerta.\par
+
+\b 9.2 Expo Image\b0\par
+Uso: renderizado optimizado de imagenes.\par
+Justificacion: mejora la visualizacion y administracion de imagenes dentro de la aplicacion.\par
+
+\b 10. Mapas y georreferenciacion\b0\par
+
+\b 10.1 React Native Maps\b0\par
+Uso: soporte para visualizacion de mapas embebidos.\par
+Justificacion: aunque actualmente se priorizo la apertura de Google Maps externo por estabilidad, esta tecnologia fue integrada para permitir una evolucion futura hacia mapas nativos dentro de la app.\par
+
+\b 10.2 Expo Linking\b0\par
+Uso: apertura de aplicaciones externas como Google Maps.\par
+Justificacion: permite enviar al usuario directamente a una aplicacion externa de mapas para ver rutas o coordenadas.\par
+
+\b 11. Construccion y despliegue\b0\par
+
+\b 11.1 EAS Build\b0\par
+Uso: compilacion remota de APK, AAB y builds internos.\par
+Justificacion: fue elegida porque permite generar builds sin depender completamente del entorno local, simplificando la distribucion de versiones de prueba y produccion.\par
+
+\b 11.2 Expo CLI\b0\par
+Uso: ejecucion del proyecto en desarrollo, pruebas y comandos de compilacion.\par
+Justificacion: facilita la administracion del ciclo de desarrollo diario y la integracion con el ecosistema Expo.\par
+
+\b 12. Tecnologias complementarias instaladas en el proyecto\b0\par
+Tambien se encuentran integradas o preparadas dependencias como expo-font, expo-haptics, expo-linking, expo-splash-screen, expo-status-bar, expo-system-ui, react-native-web, react-dom y expo-router. Algunas se usan de forma directa y otras quedan listas para futuras ampliaciones del sistema.\par
+
+\b 13. Conclusion\b0\par
+Las tecnologias seleccionadas responden a necesidades concretas del proyecto: desarrollo multiplataforma, rapidez de implementacion, acceso a funciones nativas, soporte para notificaciones, geolocalizacion y escalabilidad. React Native y Expo constituyen el nucleo del sistema, mientras que Axios, Socket.IO, AsyncStorage, Expo Notifications y Expo Location complementan la logica operativa necesaria para un sistema de alertas de emergencia movil.\par
+}

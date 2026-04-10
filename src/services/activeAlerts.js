@@ -1,4 +1,5 @@
 import api from "./api";
+import { getAlertMunicipality, sameMunicipality } from "./municipality";
 
 function getNumeric(value) {
   const n = Number(value);
@@ -114,13 +115,23 @@ async function fetchUnitContext() {
     return {
       coordCandidates,
       coverageRadius: extractCoverageRadius(data),
+      municipality: data?.municipio || "",
     };
   } catch {
     return {
       coordCandidates: [],
       coverageRadius: null,
+      municipality: "",
     };
   }
+}
+
+function filterAlertsByMunicipality(alerts, municipality) {
+  if (!municipality) {
+    return alerts;
+  }
+
+  return alerts.filter((alert) => sameMunicipality(getAlertMunicipality(alert), municipality));
 }
 
 async function queryNearbyByPath(path, coord, radio) {
@@ -175,6 +186,7 @@ export async function fetchNearbyAlertsRobust(primaryCoords, options = {}) {
       error: noCoordsError,
       attempts,
       coverageRadius: baseRadio,
+      unitMunicipality: unitContext.municipality,
     };
   }
 
@@ -194,15 +206,17 @@ export async function fetchNearbyAlertsRobust(primaryCoords, options = {}) {
       lastAttempt = primaryAttempt;
 
       if (primary.ok) {
-        if (primary.alerts.length > 0) {
+        const municipalityAlerts = filterAlertsByMunicipality(primary.alerts, unitContext.municipality);
+        if (municipalityAlerts.length > 0) {
           return {
-            alerts: primary.alerts,
+            alerts: municipalityAlerts,
             usedCoords: coord,
             usedRadio: radio,
             usedPath: primary.path,
             error: null,
             attempts,
             coverageRadius: baseRadio,
+            unitMunicipality: unitContext.municipality,
           };
         }
         continue;
@@ -225,15 +239,17 @@ export async function fetchNearbyAlertsRobust(primaryCoords, options = {}) {
         lastAttempt = fallbackAttempt;
 
         if (fallback.ok) {
-          if (fallback.alerts.length > 0) {
+          const municipalityAlerts = filterAlertsByMunicipality(fallback.alerts, unitContext.municipality);
+          if (municipalityAlerts.length > 0) {
             return {
-              alerts: fallback.alerts,
+              alerts: municipalityAlerts,
               usedCoords: coord,
               usedRadio: radio,
               usedPath: fallback.path,
               error: null,
               attempts,
               coverageRadius: baseRadio,
+              unitMunicipality: unitContext.municipality,
             };
           }
 
@@ -253,6 +269,7 @@ export async function fetchNearbyAlertsRobust(primaryCoords, options = {}) {
     error: lastError,
     attempts,
     coverageRadius: baseRadio,
+    unitMunicipality: unitContext.municipality,
   };
 }
 

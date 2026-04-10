@@ -12,8 +12,12 @@ const Stack = createNativeStackNavigator();
 
 export default function CitizenStack() {
   return (
-    <Stack.Navigator>
-      <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ title: "Inicio" }} />
+    <Stack.Navigator screenOptions={{ headerBackTitleVisible: false }}>
+      <Stack.Screen
+        name="Dashboard"
+        component={DashboardScreen}
+        options={{ title: "Inicio", headerBackVisible: false, headerLeft: () => null, gestureEnabled: false }}
+      />
       <Stack.Screen name="AlertCreated" component={AlertCreatedScreen} options={{ title: "Alerta creada" }} />
       <Stack.Screen name="HelpOnTheWay" component={HelpOnTheWayScreen} options={{ title: "Ayuda en camino" }} />
       <Stack.Screen name="AlertClosed" component={AlertClosedScreen} options={{ title: "Alerta cerrada" }} />

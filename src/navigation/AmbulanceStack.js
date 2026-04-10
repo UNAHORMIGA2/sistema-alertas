@@ -12,8 +12,12 @@ const Stack = createNativeStackNavigator();
 
 export default function AmbulanceStack() {
   return (
-    <Stack.Navigator>
-      <Stack.Screen name="AmbulanceDashboard" component={AmbulanceDashboardScreen} options={{ title: "Panel ambulancia" }} />
+    <Stack.Navigator screenOptions={{ headerBackTitleVisible: false }}>
+      <Stack.Screen
+        name="AmbulanceDashboard"
+        component={AmbulanceDashboardScreen}
+        options={{ title: "Panel ambulancia", headerBackVisible: false, headerLeft: () => null, gestureEnabled: false }}
+      />
       <Stack.Screen name="AmbulanceAlert" component={AmbulanceAlertScreen} options={{ title: "Detalle emergencia" }} />
       <Stack.Screen name="AmbulanceReport" component={AmbulanceReportScreen} options={{ title: "Enviar reporte" }} />
       <Stack.Screen name="AmbulanceProfile" component={AmbulanceProfileScreen} options={{ title: "Perfil" }} />

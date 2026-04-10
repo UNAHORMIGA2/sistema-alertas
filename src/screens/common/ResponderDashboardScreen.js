@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -10,15 +11,16 @@ import {
   Text,
   View,
 } from "react-native";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import api from "../../services/api";
-import { getCurrentLocation, startLocationUpdates } from "../../services/location";
+import HamburgerMenu from "../../components/HamburgerMenu";
 import { useAuth } from "../../context/AuthContext";
 import { useNotificationCenter } from "../../context/NotificationCenterContext";
 import { fetchNearbyAlertsRobust, mergeAlerts, normalizeMyAlerts } from "../../services/activeAlerts";
 import { alertLocationText, citizenAgeText, citizenName, citizenPhone, getAlertId } from "../../services/alertUtils";
+import api from "../../services/api";
+import { getCurrentLocation, startLocationUpdates } from "../../services/location";
 import { getResponderUi } from "../../services/responderUi";
-import HamburgerMenu from "../../components/HamburgerMenu";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 
 function isAlertAssignedToMe(alerta) {
   return (
@@ -41,6 +43,53 @@ function getStatusBadgeColor(alerta, ui) {
   return ui.badgeColor;
 }
 
+function getAlertTimestamp(alerta) {
+  const candidates = [alerta?.fecha_asignacion, alerta?.fecha_creacion, alerta?.createdAt];
+  for (const value of candidates) {
+    const time = new Date(value || "").getTime();
+    if (Number.isFinite(time) && time > 0) {
+      return time;
+    }
+  }
+  return 0;
+}
+
+function getAlertDistance(alerta) {
+  const candidates = [alerta?.distancia_metros, alerta?.distance, alerta?.distancia];
+  for (const value of candidates) {
+    const distance = Number(value);
+    if (Number.isFinite(distance) && distance >= 0) {
+      return distance;
+    }
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
+function compareAlerts(a, b) {
+  const aAssigned = isAlertAssignedToMe(a);
+  const bAssigned = isAlertAssignedToMe(b);
+
+  if (aAssigned !== bAssigned) {
+    return Number(bAssigned) - Number(aAssigned);
+  }
+
+  const aState = String(a?.estado || "").toLowerCase();
+  const bState = String(b?.estado || "").toLowerCase();
+  if (aState !== bState) {
+    if (aState === "atendiendo") return -1;
+    if (bState === "atendiendo") return 1;
+    if (aState === "asignada") return -1;
+    if (bState === "asignada") return 1;
+  }
+
+  const distanceDiff = getAlertDistance(a) - getAlertDistance(b);
+  if (Number.isFinite(distanceDiff) && distanceDiff !== 0) {
+    return distanceDiff;
+  }
+
+  return getAlertTimestamp(a) - getAlertTimestamp(b);
+}
+
 export default function ResponderDashboardScreen({ navigation, variant = "policia" }) {
   const ui = getResponderUi(variant);
   const { logout } = useAuth();
@@ -52,6 +101,7 @@ export default function ResponderDashboardScreen({ navigation, variant = "polici
   const [menuVisible, setMenuVisible] = useState(false);
   const [unitLocation, setUnitLocation] = useState(null);
   const [coverageRadius, setCoverageRadius] = useState(25);
+  const [unitMunicipality, setUnitMunicipality] = useState("");
 
   const hasLoadedOnceRef = useRef(false);
   const notificationsPrimedRef = useRef(false);
@@ -85,8 +135,17 @@ export default function ResponderDashboardScreen({ navigation, variant = "polici
   const pendingAlerts = useMemo(() => {
     return alerts
       .filter((item) => ui.filterAlert(item) && !isResponderFinalState(item))
-      .sort((a, b) => Number(isAlertAssignedToMe(b)) - Number(isAlertAssignedToMe(a)));
+      .sort(compareAlerts);
   }, [alerts, ui]);
+
+  const assignedAlerts = useMemo(
+    () => pendingAlerts.filter((item) => isAlertAssignedToMe(item)),
+    [pendingAlerts],
+  );
+  const availableAlerts = useMemo(
+    () => pendingAlerts.filter((item) => !isAlertAssignedToMe(item)),
+    [pendingAlerts],
+  );
 
   const activeCount = pendingAlerts.filter((item) => item?.estado === "atendiendo").length;
   const waitingCount = pendingAlerts.filter((item) => item?.estado !== "atendiendo").length;
@@ -146,6 +205,7 @@ export default function ResponderDashboardScreen({ navigation, variant = "polici
       const nextAvailable = response?.data?.data?.disponible;
       if (typeof nextAvailable === "boolean") {
         setAvailable(nextAvailable);
+        AsyncStorage.setItem("@personal:disponible", String(nextAvailable)).catch(() => {});
       }
     } catch {
       // Si falla, usamos el estado local por defecto.
@@ -171,6 +231,9 @@ export default function ResponderDashboardScreen({ navigation, variant = "polici
             nearAlerts = nearbyResult.alerts.filter(ui.filterAlert);
             if (nearbyResult?.coverageRadius) {
               setCoverageRadius(nearbyResult.coverageRadius);
+            }
+            if (nearbyResult?.unitMunicipality) {
+              setUnitMunicipality(nearbyResult.unitMunicipality);
             }
           } catch {
             if (isRefresh) {
@@ -240,6 +303,7 @@ export default function ResponderDashboardScreen({ navigation, variant = "polici
   const handleAvailabilityChange = async (nextValue) => {
     const previousValue = available;
     setAvailable(nextValue);
+    AsyncStorage.setItem("@personal:disponible", String(nextValue)).catch(() => {});
 
     try {
       await api.patch("/mobile/personal/estado", { disponible: nextValue });
@@ -248,6 +312,7 @@ export default function ResponderDashboardScreen({ navigation, variant = "polici
       }
     } catch (error) {
       setAvailable(previousValue);
+      AsyncStorage.setItem("@personal:disponible", String(previousValue)).catch(() => {});
       Alert.alert(
         "No se pudo actualizar tu estado",
         error?.response?.data?.error || error?.response?.data?.message || "Intenta de nuevo en unos segundos.",
@@ -289,8 +354,55 @@ export default function ResponderDashboardScreen({ navigation, variant = "polici
     );
   }
 
-  const topAlert = pendingAlerts[0];
-  const topAlertAssigned = topAlert ? isAlertAssignedToMe(topAlert) : false;
+  const renderAlertCard = (alerta) => {
+    const assigned = isAlertAssignedToMe(alerta);
+    const alertId = String(getAlertId(alerta) || Math.random());
+    const numericDistance = getAlertDistance(alerta);
+    const distanceText = Number.isFinite(numericDistance)
+      ? numericDistance >= 1000
+        ? `${(numericDistance / 1000).toFixed(1)} km`
+        : `${Math.round(numericDistance)} m`
+      : null;
+    const ageText = citizenAgeText(alerta);
+
+    return (
+      <View key={alertId} style={[styles.alertCard, { borderColor: ui.accentColor }]}>
+        <View style={styles.alertCardHeader}>
+          <Text style={styles.alertCardTitle}>{assigned ? "Alerta tomada por tu unidad" : ui.alertCardTitle}</Text>
+          <View style={[styles.badge, { backgroundColor: getStatusBadgeColor(alerta, ui) }]}>
+            <Text style={styles.badgeText}>{alerta?.estado || "pendiente"}</Text>
+          </View>
+        </View>
+
+        <View style={styles.infoBlock}>
+          <Text style={styles.infoLabel}>Datos del ciudadano</Text>
+          <Text style={styles.infoText}>Nombre: {citizenName(alerta)}</Text>
+          <Text style={styles.infoText}>Telefono: {citizenPhone(alerta)}</Text>
+          {ageText && ageText !== "No disponible" ? <Text style={styles.infoText}>Edad: {ageText}</Text> : null}
+        </View>
+
+        <View style={styles.infoBlock}>
+          <Text style={styles.infoLabel}>Ubicacion</Text>
+          <Text style={styles.infoText}>{alertLocationText(alerta)}</Text>
+          {distanceText ? <Text style={styles.infoText}>Distancia estimada: {distanceText}</Text> : null}
+        </View>
+
+        <Pressable
+          style={[styles.primaryButton, { backgroundColor: assigned ? ui.accentColor : "#22C55E" }]}
+          onPress={() => {
+            if (assigned) {
+              navigation.navigate(ui.detailScreen, { alert: alerta });
+              return;
+            }
+            handleAccept(alerta);
+          }}
+        >
+          <Ionicons name={assigned ? "eye-outline" : "checkmark"} color="#FFFFFF" size={16} />
+          <Text style={styles.primaryButtonText}>{assigned ? "Ver detalle" : "Confirmar atencion"}</Text>
+        </Pressable>
+      </View>
+    );
+  };
 
   return (
     <ScrollView
@@ -337,47 +449,31 @@ export default function ResponderDashboardScreen({ navigation, variant = "polici
 
       <View style={styles.coverageCard}>
         <Ionicons name="locate-outline" size={16} color={ui.accentColor} />
-        <Text style={styles.coverageText}>Cobertura actual del cliente: {coverageRadius} km</Text>
+        <Text style={styles.coverageText}>
+          {unitMunicipality ? `Municipio: ${unitMunicipality} · ` : ""}
+          Cobertura actual del cliente: {coverageRadius} km
+        </Text>
       </View>
 
       <Text style={[styles.sectionTitle, { color: ui.dangerColor }]}>
         {ui.sectionTitle} ({pendingAlerts.length})
       </Text>
 
-      {topAlert ? (
-        <View style={[styles.alertCard, { borderColor: ui.accentColor }]}>
-          <View style={styles.alertCardHeader}>
-            <Text style={styles.alertCardTitle}>{ui.alertCardTitle}</Text>
-            <View style={[styles.badge, { backgroundColor: getStatusBadgeColor(topAlert, ui) }]}>
-              <Text style={styles.badgeText}>{topAlert?.estado || "pendiente"}</Text>
+      {pendingAlerts.length > 0 ? (
+        <View style={styles.alertsStack}>
+          {assignedAlerts.length > 0 ? (
+            <View style={styles.alertsGroup}>
+              <Text style={styles.groupTitle}>Tomadas por tu unidad ({assignedAlerts.length})</Text>
+              {assignedAlerts.map(renderAlertCard)}
             </View>
-          </View>
+          ) : null}
 
-          <View style={styles.infoBlock}>
-            <Text style={styles.infoLabel}>Datos del ciudadano</Text>
-            <Text style={styles.infoText}>Nombre: {citizenName(topAlert)}</Text>
-            <Text style={styles.infoText}>Telefono: {citizenPhone(topAlert)}</Text>
-            <Text style={styles.infoText}>Edad: {citizenAgeText(topAlert)}</Text>
-          </View>
-
-          <View style={styles.infoBlock}>
-            <Text style={styles.infoLabel}>Ubicacion</Text>
-            <Text style={styles.infoText}>{alertLocationText(topAlert)}</Text>
-          </View>
-
-          <Pressable
-            style={[styles.primaryButton, { backgroundColor: topAlertAssigned ? ui.accentColor : "#22C55E" }]}
-            onPress={() => {
-              if (topAlertAssigned) {
-                navigation.navigate(ui.detailScreen, { alert: topAlert });
-                return;
-              }
-              handleAccept(topAlert);
-            }}
-          >
-            <Ionicons name={topAlertAssigned ? "eye-outline" : "checkmark"} color="#FFFFFF" size={16} />
-            <Text style={styles.primaryButtonText}>{topAlertAssigned ? "Ver detalle" : "Confirmar atencion"}</Text>
-          </Pressable>
+          {availableAlerts.length > 0 ? (
+            <View style={styles.alertsGroup}>
+              <Text style={styles.groupTitle}>Disponibles por atender ({availableAlerts.length})</Text>
+              {availableAlerts.map(renderAlertCard)}
+            </View>
+          ) : null}
         </View>
       ) : (
         <View style={styles.emptyCard}>
@@ -499,6 +595,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   sectionTitle: { fontSize: 14, fontWeight: "800", marginBottom: 10 },
+  alertsStack: { gap: 12 },
+  alertsGroup: { gap: 8 },
+  groupTitle: { fontSize: 13, fontWeight: "800", color: "#374151" },
   alertCard: { backgroundColor: "#FFFFFF", borderWidth: 1, borderRadius: 14, padding: 10 },
   alertCardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   alertCardTitle: { fontSize: 13, fontWeight: "700", color: "#111827" },

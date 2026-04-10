@@ -1,8 +1,16 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
+import { Platform } from "react-native";
 import { useAuth } from "./AuthContext";
-import { registerForPushNotifications } from "../services/notifications";
+import {
+  DEFAULT_NOTIFICATION_CHANNEL_ID,
+  EMERGENCY_NOTIFICATION_CHANNEL_ID,
+  registerForPushNotifications,
+  setupNotificationChannels,
+} from "../services/notifications";
+import { hydrateNotificationPayload } from "../services/notificationNavigation";
+import { isCitizenRole, normalizeRole } from "../services/roles";
 import { connectSocket, disconnectSocket, getSocket } from "../services/socket";
 
 const NotificationCenterContext = createContext({
@@ -12,6 +20,8 @@ const NotificationCenterContext = createContext({
   markAllAsRead: () => {},
   markAsRead: () => {},
   clearNotifications: () => {},
+  pendingNotification: null,
+  clearPendingNotification: () => {},
 });
 
 const MAX_NOTIFICATIONS = 80;
@@ -21,15 +31,76 @@ function buildStorageKey(user) {
     return null;
   }
 
-  return `@notifications:${user.rol || "anon"}:${user.id}`;
+  return `@notifications:${normalizeRole(user?.rol) || "anon"}:${user.id}`;
 }
 
 function createNotificationId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function resolveNotificationState(type, payload = {}) {
+  return String(
+    payload?.nuevoEstado ||
+      payload?.estado ||
+      payload?.notificationKind ||
+      payload?.type ||
+      payload?.action ||
+      type ||
+      "",
+  )
+    .trim()
+    .toLowerCase();
+}
+
+function inferNotificationDedupeKey(entry = {}, payload = {}) {
+  const alertId = payload?.alerta_id || payload?.alertaId || payload?.id || payload?.alert?.id || payload?.alert?._id || "";
+  if (!alertId) {
+    return entry?.dedupeKey ? String(entry.dedupeKey) : null;
+  }
+
+  const state = resolveNotificationState(entry?.type, payload);
+  const normalizedState = state
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[\s_-]+/g, "");
+
+  if (normalizedState.includes("assignment") || normalizedState === "asignada" || normalizedState === "alertaasignada") {
+    return `alert-${alertId}-assigned`;
+  }
+
+  if (
+    normalizedState.includes("emergency") ||
+    normalizedState.includes("nearby") ||
+    normalizedState.includes("newalert") ||
+    normalizedState.includes("nuevaalerta") ||
+    normalizedState === "activa"
+  ) {
+    return `alert-${alertId}-nearby`;
+  }
+
+  if (
+    normalizedState === "atendiendo" ||
+    normalizedState === "cerrada" ||
+    normalizedState === "cancelada" ||
+    normalizedState === "expirada" ||
+    normalizedState === "confirmando"
+  ) {
+    return `alert-${alertId}-${normalizedState}`;
+  }
+
+  return `alert-${alertId}-${normalizedState || "general"}`;
+}
+
+function isEmergencyPayload(payload = {}) {
+  const tipo = String(payload?.tipo || payload?.tipo_alerta || "").toLowerCase();
+  const notificationKind = String(payload?.notificationKind || payload?.type || payload?.action || "").toLowerCase();
+  return tipo === "panico" || tipo === "medica" || notificationKind.includes("emergency") || notificationKind.includes("assignment");
+}
+
 function normalizeNotification(entry = {}, fallbackRole = "") {
-  const payload = entry?.payload && typeof entry.payload === "object" ? entry.payload : {};
+  const rawPayload = entry?.payload && typeof entry.payload === "object" ? entry.payload : {};
+  const payload = hydrateNotificationPayload(rawPayload);
+  const dedupeKey = inferNotificationDedupeKey(entry, payload);
 
   return {
     id: String(entry?.id || createNotificationId()),
@@ -38,7 +109,7 @@ function normalizeNotification(entry = {}, fallbackRole = "") {
     type: entry?.type || "general",
     createdAt: entry?.createdAt || new Date().toISOString(),
     read: Boolean(entry?.read),
-    dedupeKey: entry?.dedupeKey ? String(entry.dedupeKey) : null,
+    dedupeKey,
     role: entry?.role || fallbackRole || "",
     payload,
   };
@@ -46,16 +117,14 @@ function normalizeNotification(entry = {}, fallbackRole = "") {
 
 function buildNotificationFromPush(notification, role) {
   const content = notification?.request?.content || {};
-  const data = content?.data && typeof content.data === "object" ? content.data : {};
-  const alertId = data?.alerta_id || data?.alertaId || data?.id || "";
-  const type = data?.type || data?.action || "push";
+  const data = hydrateNotificationPayload(content?.data && typeof content.data === "object" ? content.data : {});
+  const type = data?.notificationKind || data?.type || data?.action || "push";
 
   return normalizeNotification(
     {
       title: content?.title || "Nueva notificacion",
       body: content?.body || "",
       type,
-      dedupeKey: alertId ? `push-${alertId}-${type}` : `push-${type}-${content?.title || "general"}`,
       payload: data,
     },
     role,
@@ -65,14 +134,18 @@ function buildNotificationFromPush(notification, role) {
 export function NotificationCenterProvider({ children }) {
   const { user, token, isAuthenticated } = useAuth();
   const [items, setItems] = useState([]);
-  const storageKey = useMemo(() => buildStorageKey(user), [user?.id, user?.rol]);
+  const [pendingNotification, setPendingNotification] = useState(null);
+  const storageKey = useMemo(() => buildStorageKey(user), [user]);
   const hydratedRef = useRef(false);
+  const initialResponseHandledRef = useRef(false);
 
   useEffect(() => {
     hydratedRef.current = false;
+    initialResponseHandledRef.current = false;
 
     if (!storageKey) {
       setItems([]);
+      setPendingNotification(null);
       return;
     }
 
@@ -110,7 +183,7 @@ export function NotificationCenterProvider({ children }) {
 
   const addNotification = useCallback(
     async (entry, options = {}) => {
-      const normalized = normalizeNotification(entry, user?.rol || "");
+      const normalized = normalizeNotification(entry, normalizeRole(user?.rol) || "");
       let inserted = false;
 
       setItems((prev) => {
@@ -128,12 +201,21 @@ export function NotificationCenterProvider({ children }) {
 
       if (inserted && options?.showBanner) {
         try {
+          const emergency = isEmergencyPayload(normalized.payload);
+          const content = {
+            title: normalized.title,
+            body: normalized.body,
+            data: normalized.payload,
+            sound: emergency ? "sirena.wav" : "default",
+            ...(Platform.OS === "android"
+              ? {
+                  channelId: emergency ? EMERGENCY_NOTIFICATION_CHANNEL_ID : DEFAULT_NOTIFICATION_CHANNEL_ID,
+                }
+              : {}),
+          };
+
           await Notifications.scheduleNotificationAsync({
-            content: {
-              title: normalized.title,
-              body: normalized.body,
-              data: normalized.payload,
-            },
+            content,
             trigger: null,
           });
         } catch {
@@ -160,13 +242,51 @@ export function NotificationCenterProvider({ children }) {
     setItems([]);
   }, []);
 
+  const clearPendingNotification = useCallback(() => {
+    setPendingNotification(null);
+  }, []);
+
   useEffect(() => {
     if (!isAuthenticated || !user?.id) {
+      setPendingNotification(null);
       return;
     }
 
-    registerForPushNotifications().catch(() => {});
-  }, [isAuthenticated, user?.id]);
+    let cancelled = false;
+
+    (async () => {
+      try {
+        await setupNotificationChannels();
+        await registerForPushNotifications();
+
+        if (cancelled || initialResponseHandledRef.current) {
+          return;
+        }
+
+        const lastResponse = Notifications.getLastNotificationResponseAsync
+          ? await Notifications.getLastNotificationResponseAsync()
+          : Notifications.getLastNotificationResponse?.();
+
+        if (lastResponse?.notification) {
+          const built = buildNotificationFromPush(lastResponse.notification, normalizeRole(user?.rol) || "");
+          await addNotification(built, { showBanner: false });
+          if (!cancelled) {
+            setPendingNotification(built);
+            initialResponseHandledRef.current = true;
+          }
+          if (Notifications.clearLastNotificationResponseAsync) {
+            await Notifications.clearLastNotificationResponseAsync();
+          }
+        }
+      } catch {
+        // Si falla el setup, no rompemos la app.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [addNotification, isAuthenticated, user?.id, user?.rol]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -175,15 +295,24 @@ export function NotificationCenterProvider({ children }) {
     }
 
     const socket = connectSocket(token);
-    if (!socket || user?.rol === "ciudadano") {
+    const normalizedRole = normalizeRole(user?.rol);
+    if (!socket) {
       return;
     }
 
-    const handleSocketMessage = (payload = {}) => {
-      const alertId = payload?.alertaId || payload?.alerta_id || payload?.id || "";
-      const state = payload?.nuevoEstado || payload?.estado || "socket";
-      const title = payload?.titulo || payload?.title || "Actualizacion de alerta";
-      const body = payload?.mensaje || payload?.message || "Revisa la bandeja para ver el detalle.";
+    const handleSocketMessage = async (payload = {}) => {
+      if (!isCitizenRole(normalizedRole)) {
+        const rawDisp = await AsyncStorage.getItem("@personal:disponible");
+        if (rawDisp === "false") {
+          return; // Ignore alerts when deactivated
+        }
+      }
+
+      const hydratedPayload = hydrateNotificationPayload(payload);
+      const alertId = hydratedPayload?.alertaId || hydratedPayload?.alerta_id || hydratedPayload?.id || hydratedPayload?.alert?.id || "";
+      const state = hydratedPayload?.nuevoEstado || hydratedPayload?.estado || hydratedPayload?.notificationKind || "socket";
+      const title = hydratedPayload?.titulo || hydratedPayload?.title || "Actualizacion de alerta";
+      const body = hydratedPayload?.mensaje || hydratedPayload?.message || "Revisa la bandeja para ver el detalle.";
 
       addNotification(
         {
@@ -191,21 +320,25 @@ export function NotificationCenterProvider({ children }) {
           body,
           type: state,
           dedupeKey: alertId ? `socket-${alertId}-${state}` : `socket-${state}-${body}`,
-          payload,
+          payload: hydratedPayload,
         },
-        { showBanner: false },
+        { showBanner: true },
       ).catch(() => {});
     };
 
-    socket.on("nueva-alerta", handleSocketMessage);
-    socket.on("alerta-asignada", handleSocketMessage);
     socket.on("alerta-actualizada", handleSocketMessage);
+    if (!isCitizenRole(normalizedRole)) {
+      socket.on("nueva-alerta", handleSocketMessage);
+      socket.on("alerta-asignada", handleSocketMessage);
+    }
 
     return () => {
       const current = getSocket();
-      current?.off("nueva-alerta", handleSocketMessage);
-      current?.off("alerta-asignada", handleSocketMessage);
       current?.off("alerta-actualizada", handleSocketMessage);
+      if (!isCitizenRole(normalizedRole)) {
+        current?.off("nueva-alerta", handleSocketMessage);
+        current?.off("alerta-asignada", handleSocketMessage);
+      }
     };
   }, [addNotification, isAuthenticated, token, user?.rol]);
 
@@ -214,12 +347,23 @@ export function NotificationCenterProvider({ children }) {
       return;
     }
 
-    const receivedSubscription = Notifications.addNotificationReceivedListener((notification) => {
-      addNotification(buildNotificationFromPush(notification, user?.rol || ""), { showBanner: false }).catch(() => {});
+    const receivedSubscription = Notifications.addNotificationReceivedListener(async (notification) => {
+      const normalizedRole = normalizeRole(user?.rol);
+      if (!isCitizenRole(normalizedRole)) {
+        const rawDisp = await AsyncStorage.getItem("@personal:disponible");
+        if (rawDisp === "false") {
+          return;
+        }
+      }
+      addNotification(buildNotificationFromPush(notification, normalizedRole || ""), { showBanner: false }).catch(() => {});
     });
 
-    const responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      addNotification(buildNotificationFromPush(response?.notification, user?.rol || ""), { showBanner: false }).catch(() => {});
+    const responseSubscription = Notifications.addNotificationResponseReceivedListener(async (response) => {
+      const built = await addNotification(buildNotificationFromPush(response?.notification, normalizeRole(user?.rol) || ""), { showBanner: false });
+      setPendingNotification(built);
+      if (Notifications.clearLastNotificationResponseAsync) {
+        Notifications.clearLastNotificationResponseAsync().catch(() => {});
+      }
     });
 
     return () => {
@@ -236,8 +380,10 @@ export function NotificationCenterProvider({ children }) {
       markAllAsRead,
       markAsRead,
       clearNotifications,
+      pendingNotification,
+      clearPendingNotification,
     }),
-    [addNotification, clearNotifications, items, markAllAsRead, markAsRead],
+    [addNotification, clearNotifications, clearPendingNotification, items, markAllAsRead, markAsRead, pendingNotification],
   );
 
   return <NotificationCenterContext.Provider value={value}>{children}</NotificationCenterContext.Provider>;

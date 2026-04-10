@@ -12,8 +12,12 @@ const Stack = createNativeStackNavigator();
 
 export default function PoliceStack() {
   return (
-    <Stack.Navigator>
-      <Stack.Screen name="PoliceDashboard" component={PoliceDashboardScreen} options={{ title: "Panel policia" }} />
+    <Stack.Navigator screenOptions={{ headerBackTitleVisible: false }}>
+      <Stack.Screen
+        name="PoliceDashboard"
+        component={PoliceDashboardScreen}
+        options={{ title: "Panel policia", headerBackVisible: false, headerLeft: () => null, gestureEnabled: false }}
+      />
       <Stack.Screen name="PoliceAlert" component={PoliceAlertScreen} options={{ title: "Detalle emergencia" }} />
       <Stack.Screen name="PoliceReport" component={PoliceReportScreen} options={{ title: "Enviar reporte" }} />
       <Stack.Screen name="PoliceProfile" component={PoliceProfileScreen} options={{ title: "Perfil" }} />

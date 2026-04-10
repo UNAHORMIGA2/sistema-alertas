@@ -1,5 +1,6 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { loadTenantSelection } from "./tenantAccess";
 
 const BASE_URL = "https://backend-emergencias.onrender.com/api";
 const ACCESS_TOKEN_KEY = "@auth:token";
@@ -33,6 +34,7 @@ api.interceptors.request.use(async (config) => {
 
   const accessToken = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
   const storedRefreshToken = await AsyncStorage.getItem(REFRESH_TOKEN_KEY);
+  const tenantSelection = await loadTenantSelection();
 
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
@@ -50,6 +52,9 @@ api.interceptors.request.use(async (config) => {
   }
 
   config.headers["x-plataforma"] = "mobile";
+  if (tenantSelection?.tenantId && !config.headers["x-tenant-id"]) {
+    config.headers["x-tenant-id"] = tenantSelection.tenantId;
+  }
   config.withCredentials = true;
   return config;
 });
@@ -59,8 +64,15 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error?.config;
     const status = error?.response?.status;
+    const requestUrl = String(originalRequest?.url || "");
+    const skipRefresh =
+      Boolean(originalRequest?._skipAuthRefresh) ||
+      requestUrl.includes("/auth/login") ||
+      requestUrl.includes("/auth/refresh") ||
+      requestUrl === "/" ||
+      requestUrl.endsWith("/");
 
-    if (!originalRequest || status !== 401 || originalRequest._retry) {
+    if (!originalRequest || status !== 401 || originalRequest._retry || skipRefresh) {
       return Promise.reject(error);
     }
 
@@ -84,13 +96,18 @@ api.interceptors.response.use(
       const currentAccessToken = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
 
       if (!storedRefreshToken) {
-        throw new Error("No hay refresh token disponible");
+        processQueue(error, null);
+        return Promise.reject(error);
       }
 
+      const tenantSelection = await loadTenantSelection();
       const refreshHeaders = {
         "Content-Type": "application/json",
         "x-plataforma": "mobile",
       };
+      if (tenantSelection?.tenantId) {
+        refreshHeaders["x-tenant-id"] = tenantSelection.tenantId;
+      }
       refreshHeaders.Cookie = `refresh_token=${storedRefreshToken}`;
 
       const refreshResponse = await axios.post(

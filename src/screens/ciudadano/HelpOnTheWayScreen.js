@@ -50,6 +50,10 @@ export default function HelpOnTheWayScreen({ navigation, route }) {
   const cancelSecondsLeft = Math.max(0, 30 - elapsedSeconds);
   const canCancel = String(status || "").toLowerCase() === "confirmando" && cancelSecondsLeft > 0;
 
+  const goToDashboard = useCallback(() => {
+    navigation.reset({ index: 0, routes: [{ name: "Dashboard" }] });
+  }, [navigation]);
+
   const closeFlow = useCallback(
     (nextAlert) => {
       const nextStatus = getAlertEffectiveState(nextAlert);
@@ -67,16 +71,16 @@ export default function HelpOnTheWayScreen({ navigation, route }) {
 
       if (nextStatus === "cancelada") {
         Alert.alert("Alerta cancelada", "La alerta fue cancelada correctamente.");
-        navigation.reset({ index: 0, routes: [{ name: "Dashboard" }] });
+        goToDashboard();
         return;
       }
 
       if (nextStatus === "expirada") {
         Alert.alert("Alerta finalizada", "La alerta ya no sigue activa.");
-        navigation.reset({ index: 0, routes: [{ name: "Dashboard" }] });
+        goToDashboard();
       }
     },
-    [navigation],
+    [goToDashboard, navigation],
   );
 
   const refreshAlert = useCallback(async () => {
@@ -184,7 +188,7 @@ export default function HelpOnTheWayScreen({ navigation, route }) {
     try {
       await api.patch(`/alertas/${alertId}/cancelar`);
       Alert.alert("Alerta cancelada", "La alerta se cancelo dentro del tiempo permitido.");
-      navigation.reset({ index: 0, routes: [{ name: "Dashboard" }] });
+      goToDashboard();
     } catch (error) {
       Alert.alert(
         "No se pudo cancelar",
@@ -219,7 +223,7 @@ export default function HelpOnTheWayScreen({ navigation, route }) {
         </View>
       ) : null}
 
-      <Pressable style={styles.primaryButton} onPress={() => navigation.navigate("Dashboard")}>
+      <Pressable style={styles.primaryButton} onPress={goToDashboard}>
         <Text style={styles.primaryText}>Volver al inicio</Text>
       </Pressable>
     </View>
