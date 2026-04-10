@@ -77,7 +77,7 @@ export default function LoginScreen({ navigation }) {
         throw new Error("Google no devolvio idToken");
       }
 
-      const res = await api.post("/login/google/mobile", { idToken });
+      const res = await api.post("/auth/login/google/mobile", { idToken });
       const { jwt, refresh_token, usuario } = res?.data || {};
 
       if (!jwt || !usuario) {
