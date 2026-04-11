@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import api from "../../services/api";
+import { loadTenantSelection } from "../../services/tenantAccess";
 
 function showDeveloperErrorHint(rawError) {
   const message =
@@ -77,7 +78,14 @@ export default function LoginScreen({ navigation }) {
         throw new Error("Google no devolvio idToken");
       }
 
-      const res = await api.post("/auth/login/google/mobile", { idToken });
+      // Leer el tenant guardado localmente (ciudadano ya eligio municipio previamente)
+      // Para policia/paramedico puede no existir, el backend lo maneja sin filtro de tenant
+      const tenantSelection = await loadTenantSelection();
+      const tenantId = tenantSelection?.tenantId || "default";
+
+      const res = await api.post("/auth/login/google/mobile", { idToken }, {
+        headers: { "x-tenant-id": tenantId },
+      });
       const { jwt, refresh_token, usuario } = res?.data || {};
 
       if (!jwt || !usuario) {
