@@ -205,29 +205,10 @@ export function NotificationCenterProvider({ children }) {
         return [normalized, ...prev].slice(0, MAX_NOTIFICATIONS);
       });
 
-      if (inserted && options?.showBanner) {
-        try {
-          const emergency = isEmergencyPayload(normalized.payload);
-          const content = {
-            title: normalized.title,
-            body: normalized.body,
-            data: normalized.payload,
-            sound: emergency ? "sirena.wav" : "default",
-            ...(Platform.OS === "android"
-              ? {
-                  channelId: emergency ? EMERGENCY_NOTIFICATION_CHANNEL_ID : DEFAULT_NOTIFICATION_CHANNEL_ID,
-                }
-              : {}),
-          };
+      // options?.showBanner ya no genera push notification local 
+      // porque el backend ya envia FCM Notifications que Expo maneja solita.
+      // (Se elimino el ScheduleNotificationAsync para evitar duplicacion "Llegan dos notificaciones")
 
-          await Notifications.scheduleNotificationAsync({
-            content,
-            trigger: null,
-          });
-        } catch {
-          // Si el dispositivo no permite notificaciones, igual la guardamos en bandeja.
-        }
-      }
 
       return normalized;
     },

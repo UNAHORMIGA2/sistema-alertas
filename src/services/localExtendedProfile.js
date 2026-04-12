@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const EXTENDED_FIELDS = ["estado", "municipio", "edad", "edad_texto", "genero"];
+const EXTENDED_FIELDS = ["estado", "municipio", "edad", "edad_texto", "genero", "terminos_aceptados", "telefono"];
 
 function buildProfileKey(user = {}) {
   const identity = user?.id || user?.email || user?.google_id;
@@ -42,8 +42,10 @@ export async function saveLocalExtendedProfile(user = {}, profile = {}) {
     return profile;
   }
 
+  const sourceData = { ...(user || {}), ...(profile || {}) };
+
   const payload = EXTENDED_FIELDS.reduce((acc, field) => {
-    const value = profile?.[field];
+    const value = sourceData[field];
     if (value !== undefined && value !== null && String(value).trim() !== "") {
       acc[field] = value;
     }
