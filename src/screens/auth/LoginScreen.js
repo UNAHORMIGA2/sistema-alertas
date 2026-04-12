@@ -104,12 +104,32 @@ export default function LoginScreen({ navigation }) {
 
       if (role !== "ciudadano") {
         // Policia/paramedico: entrar directo sin pantalla de bienvenida
-        await login(session);
+        await login({ accessToken: jwt, refreshToken: refresh_token, user: usuario });
       } else {
-        // Ciudadano nuevo: necesita aceptar terminos y completar perfil
-        if (!usuario.terminos_aceptados) {
+        // El endpoint de login no devuelve terminos_aceptados, telefono, estado ni municipio.
+        // Pedir el perfil completo con el JWT recien obtenido para decidir la navegacion.
+        let perfilCompleto = usuario;
+        try {
+          const perfilRes = await api.get("/mobile/ciudadano/perfil", {
+            headers: { Authorization: `Bearer ${jwt}`, "x-tenant-id": tenantId },
+          });
+          perfilCompleto = {
+            ...usuario,
+            ...(perfilRes?.data?.data || perfilRes?.data?.ciudadano || perfilRes?.data || {}),
+          };
+        } catch {
+          // Si falla usamos lo que devolvio el login
+        }
+
+        const session = {
+          accessToken: jwt,
+          refreshToken: refresh_token,
+          user: perfilCompleto,
+        };
+
+        if (!perfilCompleto.terminos_aceptados) {
           navigation.navigate("Terms", { session });
-        } else if (!usuario.telefono || !usuario.estado || !usuario.municipio) {
+        } else if (!perfilCompleto.telefono || !perfilCompleto.estado || !perfilCompleto.municipio) {
           navigation.navigate("CompleteProfile", { session });
         } else {
           // Ciudadano ya registrado: entrar directo
