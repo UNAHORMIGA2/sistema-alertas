@@ -31,7 +31,13 @@ export function buildAccessCodePrefix(municipality) {
 export function isAccessCodeCompatible(municipality, accessCode) {
   const normalizedCode = normalizeTenantText(accessCode).toUpperCase();
   const prefix = buildAccessCodePrefix(municipality);
-  return Boolean(prefix && normalizedCode && normalizedCode.startsWith(prefix));
+  // Debe comenzar con el prefijo del municipio Y tener al menos 5 caracteres en total
+  return Boolean(
+    prefix &&
+    normalizedCode &&
+    normalizedCode.startsWith(prefix) &&
+    normalizedCode.length >= 5,
+  );
 }
 
 export function getStateValidationCandidates(state) {

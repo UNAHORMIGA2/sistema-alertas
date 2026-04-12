@@ -107,12 +107,21 @@ export default function LoginScreen({ navigation }) {
         await login({ accessToken: jwt, refreshToken: refresh_token, user: usuario });
       } else {
         // El endpoint de login no devuelve terminos_aceptados, telefono, estado ni municipio.
-        // Pedir el perfil completo con el JWT recien obtenido para decidir la navegacion.
+        // Usamos axios directo (sin interceptor) para no perder el JWT recien obtenido.
         let perfilCompleto = usuario;
         try {
-          const perfilRes = await api.get("/mobile/ciudadano/perfil", {
-            headers: { Authorization: `Bearer ${jwt}`, "x-tenant-id": tenantId },
-          });
+          const { default: axios } = await import("axios");
+          const perfilRes = await axios.get(
+            "https://backend-emergencias.onrender.com/api/mobile/ciudadano/perfil",
+            {
+              headers: {
+                Authorization: `Bearer ${jwt}`,
+                "x-tenant-id": tenantId,
+                "x-plataforma": "mobile",
+              },
+              timeout: 15000,
+            },
+          );
           perfilCompleto = {
             ...usuario,
             ...(perfilRes?.data?.data || perfilRes?.data?.ciudadano || perfilRes?.data || {}),
