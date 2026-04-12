@@ -30,24 +30,28 @@ export default function PoliceReportScreen({ navigation, route }) {
   const [selectorVisible, setSelectorVisible] = useState(false);
 
   const pickImage = async () => {
-    if (photos.length >= MAX_REPORT_PHOTOS) {
-      Alert.alert("Limite alcanzado", `Solo puedes adjuntar hasta ${MAX_REPORT_PHOTOS} fotos por reporte.`);
-      return;
-    }
+    try {
+      if (photos.length >= MAX_REPORT_PHOTOS) {
+        Alert.alert("Limite alcanzado", `Solo puedes adjuntar hasta ${MAX_REPORT_PHOTOS} fotos por reporte.`);
+        return;
+      }
 
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (permission.status !== "granted") {
-      Alert.alert("Permiso requerido", "Debes permitir acceso a galeria para adjuntar evidencia.");
-      return;
-    }
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permission.status !== "granted") {
+        Alert.alert("Permiso requerido", "Debes permitir acceso a galeria para adjuntar evidencia.");
+        return;
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+      });
 
-    if (!result.canceled && result.assets?.[0]) {
-      setPhotos((prev) => [...prev, result.assets[0]].slice(0, MAX_REPORT_PHOTOS));
+      if (!result.canceled && result.assets?.[0]) {
+        setPhotos((prev) => [...prev, result.assets[0]].slice(0, MAX_REPORT_PHOTOS));
+      }
+    } catch (e) {
+      Alert.alert("Error de galeria", "Hubo un problema al intentar abrir las fotos.");
     }
   };
 

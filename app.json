@@ -73,6 +73,12 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "La aplicacion necesita acceso a tus fotos para que puedas adjuntar evidencia en los reportes de emergencias."
+        }
       ]
     ],
     "extra": {

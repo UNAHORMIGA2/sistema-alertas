@@ -134,15 +134,38 @@ export default function CompleteProfileScreen({ navigation, route }) {
       return;
     }
 
-    if (requiresAccessCode && !isAccessCodeCompatible(municipio, accessCode)) {
-      Alert.alert("Codigo invalido", "El codigo municipal no coincide con el municipio seleccionado. Por favor verifica.");
-      return;
-    }
-
     try {
       setLoading(true);
 
       if (requiresAccessCode) {
+        // 1. Validar localmente la estructura
+        if (!isAccessCodeCompatible(municipio, accessCode)) {
+          Alert.alert("Codigo invalido", "El codigo municipal no parece coincidir con el municipio seleccionado. Revisa y vuelve a intentar.");
+          setLoading(false);
+          return;
+        }
+
+        // 2. Validar con el backend que el codigo es el correcto para el municipio y esta activo
+        try {
+          const validacionRes = await api.post("/public/validar-codigo-acceso", {
+            estado: estado.trim(),
+            municipio: municipio.trim(),
+            codigo_acceso: accessCode.trim(),
+          });
+          
+          if (!validacionRes?.data?.success) {
+            Alert.alert("Error de validacion", "El codigo de acceso ingresado es incorrecto o el municipio no tiene una membresia activa.");
+            setLoading(false);
+            return;
+          }
+        } catch (valError) {
+          const msg = valError?.response?.data?.message || valError?.response?.data?.error || "El codigo no es valido para este municipio.";
+          Alert.alert("Error", msg);
+          setLoading(false);
+          return;
+        }
+
+        // 3. Todo bien, guardar seleccion local
         await saveTenantSelection({
           state: estado.trim(),
           municipality: municipio.trim(),
