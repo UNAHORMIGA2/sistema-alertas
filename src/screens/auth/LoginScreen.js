@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import api from "../../services/api";
 import { loadTenantSelection } from "../../services/tenantAccess";
 import { useAuth } from "../../context/AuthContext";
+import { loadLocalExtendedProfile } from "../../services/localExtendedProfile";
 
 function showDeveloperErrorHint(rawError) {
   const message =
@@ -106,29 +107,13 @@ export default function LoginScreen({ navigation }) {
         // Policia/paramedico: entrar directo sin pantalla de bienvenida
         await login({ accessToken: jwt, refreshToken: refresh_token, user: usuario });
       } else {
-        // El endpoint de login no devuelve terminos_aceptados, telefono, estado ni municipio.
-        // Usamos axios directo (sin interceptor) para no perder el JWT recien obtenido.
-        let perfilCompleto = usuario;
-        try {
-          const { default: axios } = await import("axios");
-          const perfilRes = await axios.get(
-            "https://backend-emergencias.onrender.com/api/mobile/ciudadano/perfil",
-            {
-              headers: {
-                Authorization: `Bearer ${jwt}`,
-                "x-tenant-id": tenantId,
-                "x-plataforma": "mobile",
-              },
-              timeout: 15000,
-            },
-          );
-          perfilCompleto = {
-            ...usuario,
-            ...(perfilRes?.data?.data || perfilRes?.data?.ciudadano || perfilRes?.data || {}),
-          };
-        } catch {
-          // Si falla usamos lo que devolvio el login
-        }
+        // El backend solo acepta JWT via cookies, no por header Authorization.
+        // El perfil extendido (estado, municipio, telefono) se guarda localmente
+        // en AsyncStorage al completar el registro por primera vez.
+        // La seleccion de tenant guardada indica que el ciudadano ya paso por ese flujo.
+
+        const localProfile = await loadLocalExtendedProfile(usuario);
+        const perfilCompleto = { ...usuario, ...localProfile };
 
         const session = {
           accessToken: jwt,
@@ -136,12 +121,20 @@ export default function LoginScreen({ navigation }) {
           user: perfilCompleto,
         };
 
-        if (!perfilCompleto.terminos_aceptados) {
+        // terminos_aceptados viene del backend (en login google/mobile si el ciudadano ya los acepto
+        // el campo viene como true; si no, como false o undefined)
+        const yaAceptoTerminos = Boolean(perfilCompleto.terminos_aceptados);
+
+        // Si tiene tenant guardado localmente, ya completo el flujo de registro
+        const tenantYaGuardado = Boolean(tenantId && tenantId !== "default");
+        const tienePerfilLocal = Boolean(localProfile?.estado && localProfile?.municipio);
+
+        if (!yaAceptoTerminos) {
           navigation.navigate("Terms", { session });
-        } else if (!perfilCompleto.telefono || !perfilCompleto.estado || !perfilCompleto.municipio) {
+        } else if (!tenantYaGuardado || !tienePerfilLocal) {
           navigation.navigate("CompleteProfile", { session });
         } else {
-          // Ciudadano ya registrado: entrar directo
+          // Ciudadano ya registrado completamente: entrar directo
           await login(session);
         }
       }
